@@ -73,8 +73,6 @@ class ReactionMixin:
 
         return selected_reaction, dt
     
-    # changes
-    
     def perform_reaction(self, reaction_key):
         reaction_type, N, pos = reaction_key
 
