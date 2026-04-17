@@ -1,0 +1,23 @@
+name: Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run a one-line script
+        run: echo "Hello, GitHub Actions! Your pipeline is running."
+
+      - name: Run a multi-line script
+        run: |
+          echo "Add other commands here"
+          echo "Like 'npm install' or 'pytest'"
