@@ -13,8 +13,8 @@ import json
 from datetime import datetime
 from collections import Counter
 
-from kmc_v3.simulation import run_simulation, run_multiple_simulations
-from kmc_v3.utils import plot_distribution
+from backend.kmc_v3.simulation import run_simulation, run_multiple_simulations
+from backend.kmc_v3.utils import plot_distribution
 
 
 def main():
@@ -34,7 +34,7 @@ def main():
 
     # ── GUI mode ──────────────────────────────────────────────────
     if args.gui:
-        from kmc_v3.simulation import launch_gui
+        from backend.kmc_v3.simulation import launch_gui
         launch_gui()
         return
 
