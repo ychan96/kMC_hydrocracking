@@ -10,27 +10,35 @@ class BaseKineticMC:
         self.reaction_time   = reaction_time
         self.P_H2            = P_H2
 
-        # UNIFIED PARAMETER SET (10 Core Parameters)
+        # UNIFIED PARAMETER SET
         default_params = {
             # 1. Adsorption/Desorption Kinetics
-            'k_ads_i': 9.391672e-02,                     # rate constant for internal adsorption
-            'k_ads_t': 1.077098e-04,        # rate constant for terminal adsorption
-            'k_d_i'  : 9.922894e-02,        # rate constant for internal desorption
-            'k_d_t'  : 6.213067e-02,        # rate constant for terminal desorption
+            'k_a1': 9.113e-05,       # base rate constant for gas adsorption
+            'k_a2': 3.974e-03,       # base rate constant for light-liquid adsorption
+            'k_a3': 7.759e-13,       # base rate constant for heavy/solid adsorption
+            'k_d1': 1.654e-01,       # base rate constant for gas desorption
+            'k_d2': 3.195e-04,       # base rate constant for light-liquid desorption
+            'k_d3': 3.155e+08,       # base rate constant for heavy/solid desorption
+            
 
             # 2. Van der Waals interaction scaling for gas/light/heavy species
-            'alpha_vdw_gas'  : 1.262141e-02,   # vdW scaling for gas species (eV per carbon)
-            'alpha_vdw_light': 1.134260e-03,   # vdW scaling for light species (eV per carbon)
-            'alpha_vdw_heavy': 1.438186e-03,   # vdW scaling for heavy species (eV per carbon)
+            'alpha_gas_ads'  : -0.02812,   # vdW scaling for gas species (eV per carbon)
+            'alpha_gas_des'  : +0.03071,   # vdW scaling for gas species (eV per carbon)
+            'alpha_light_ads': +0.00850,   # vdW scaling for light-liquid species (eV per carbon)
+            'alpha_light_des': +0.09020,   # vdW scaling for light-liquid species (eV per carbon)
+            'alpha_heavy_ads': -0.02041,   # vdW scaling for heavy/solid species (eV per carbon)
+            'alpha_heavy_des': -0.01268,   # vdW scaling for heavy/solid species (eV per carbon)
+            'beta_ads':  7.571,            # chain length scaling
+            'beta_des': -9.830,            # chain length scaling
 
             # 3. Reaction Group (dMC & Scission)
-            'k_dMC_i':  5.295269e-03,
-            'k_dMC_t' : 4.058624e-03,
-            'k_crk_i' : 5.619901e-04,     # dMC formation barrier (eV) (eV)
-            'k_crk_t' : 9.740180e-03,     
+            'k_dMC_i' : 9.10e-02,
+            'k_dMC_t' : 1.60e-03,
+            'k_crk_i' : 1.17e-03,
+            'k_crk_t' : 1.26e-03,     
 
             # 3. Hydrogen Equilibrium
-            'K_H2': 5.422655e-01,        # Langmuir equilibrium constant (bar^-1)
+            'K_H2': 1.422044e+00,        # Langmuir equilibrium constant (bar^-1)
         }
         self.params = params if params is not None else default_params
 
@@ -79,36 +87,32 @@ class BaseKineticMC:
     # ------------------------------------------------------------------
 
     def get_rate(self, N, reaction_type, is_internal=False):
-        """
-        Arrhenius rate for a given reaction type and chain length N.
-
-            k_ads_i(N)    = k0_ads_i * exp(alpha_vdw * N)   # Internal adsorption rate
-            k_ads_t(N)    = k0_ads_t * exp(alpha_vdw * N)   # Terminal adsorption rate
-
-            k_d_i(N)      = k0_d_i * exp(-alpha_vdw * N)    # Internal desorption rate
-            k_d_t(N)      = k0_d_t * exp(-alpha_vdw * N)    # Terminal desorption rate
-
-            k_dMC(pos)  # dMC formation rate (terminal/internal)
-            k_crk(pos)  # C-C scission rate (terminal/internal)
-        """
-        p   = self.params
-        #kT  = 8.617e-5 * self.temp_K
+        p = self.params
+        kT = self.kb / 1.602e-19 * self.temp_K   # in eV (kb in J/K → convert to eV/K)
+        # equivalently: kT = 8.617e-5 * self.temp_K
 
         if reaction_type == 'adsorption':
-            scale = ( 
-                np.exp(p['alpha_vdw_gas'] * N) if N <= 4 else 
-                np.exp(p['alpha_vdw_light'] * N) if N <= 12 else
-                np.exp(p['alpha_vdw_heavy'] * N)
-            )
-            return p['k_ads_i'] * scale if is_internal else p['k_ads_t'] * scale
+            if N <= 4:
+                scale = np.exp(-p['alpha_gas_ads'] * N / kT)
+            elif N <= 12:
+                scale = np.exp(-p['alpha_light_ads'] * N / kT)
+                k0 = p['k_a2']
+            else:
+                scale = (N ** p['beta_ads']) * np.exp(-p['alpha_heavy_ads'] * N / kT)
+                k0 = p['k_a3']
+            return k0 * scale
 
         elif reaction_type == 'desorption':
-            scale = ( 
-                np.exp(-p['alpha_vdw_gas'] * N) if N <= 4 else 
-                np.exp(-p['alpha_vdw_light'] * N) if N <= 12 else
-                np.exp(-p['alpha_vdw_heavy'] * N)
-            )
-            return p['k_d_i'] * scale if is_internal else p['k_d_t'] * scale    
+            if N <= 4:
+                scale = np.exp(-p['alpha_gas_des'] * N / kT)
+                k0 = p['k_d1']
+            elif N <= 12:
+                scale = np.exp(-p['alpha_light_des'] * N / kT)
+                k0 = p['k_d2']
+            else:
+                scale = (N ** p['beta_des']) * np.exp(-p['alpha_heavy_des'] * N / kT)
+                k0 = p['k_d3']
+            return k0 * scale
 
         elif reaction_type == 'dMC':
             return p['k_dMC_i'] if is_internal else p['k_dMC_t']
