@@ -85,20 +85,7 @@ class ReactionMixin:
         elif reaction_type == 'cracking':
             return self.perform_cracking(N, pos)
         else:
-            return False
-        
-    def sample_adsorption_site(self, free_positions, chain_start, chain_length, use_normal=True):
-        if not free_positions:
-            return None
-
-        if use_normal:
-            mid     = chain_start + (chain_length - 1) / 2 #global
-            sigma   = chain_length / 8
-            weights = stats.norm.pdf(free_positions, loc=mid, scale=sigma) #calculates probability density at each free position
-            weights /= weights.sum() #normalize to sum to 1
-            return int(np.random.choice(free_positions, p=weights)) #picks one position from normal distribution centered on the middle of the chain, with preference for central sites
-        else:
-            return int(np.random.choice(free_positions)) #picks one position uniformly
+            return False 
     
     def perform_adsorption(self, N, pos):
         # 1. Find all N-length fragments and add start idx
@@ -121,9 +108,9 @@ class ReactionMixin:
             local_c = int(np.random.choice([0, N - 1]))
             global_c = start + local_c
         else:
-            internal_positions = list(np.where(seg[1:-1] == 0)[0] + 1 + start) #global
-            global_c = self.sample_adsorption_site(internal_positions, start, N, use_normal=True)
-            local_c = global_c - start
+            internal_positions = list(np.where(seg[1:-1] == 0)[0] + 1) #local 
+            local_c  = int(np.random.choice(internal_positions))
+            global_c = start + local_c
         
         is_terminal = (pos == 'terminal')
 
