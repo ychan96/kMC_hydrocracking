@@ -11,11 +11,13 @@ class ConfigMixin:
     and multiply by the site count — no hardcoded C1/C2/.../C5+ buckets.
 
     Rate equations:
-        k_ads_i(N)    = k0_ads_i * exp(alpha_vdw * N)   # Internal adsorption rate
-        k_ads_t(N)    = k0_ads_t * exp(alpha_vdw * N)   # Terminal adsorption rate
+        k_ads_g(N) = k0_ads_gas * exp(-alpha_vdw * N / kT)     # gas adsorption rate
+        k_ads_l(N) = k0_ads_light * exp(-alpha_vdw * N / kT)   # light-liquid adsorption rate
+        k_ads_h(N) = k0_ads_heavy * exp(-alpha_vdw * N / kT)   # Heavy adsorption rate
 
-        k_d_i(N)      = k0_d_i * exp(-alpha_vdw * N)    # Internal desorption rate
-        k_d_t(N)      = k0_d_t * exp(-alpha_vdw * N)    # Terminal desorption rate
+        k_des_g(N) = k0_des_gas * exp(-alpha_vdw * N / kT)    # gas desorption rate
+        k_des_l(N) = k0_des_light * exp(-alpha_vdw * N / kT)  # light-liquid desorption rate
+        k_des_h(N) = k0_des_heavy * exp(-alpha_vdw * N / kT)  # Heavy desorption rate
 
         k_dMC(pos)  # dMC formation rate (terminal/internal)
         k_crk(pos)  # C-C scission rate  (terminal/internal)
@@ -206,7 +208,7 @@ class ConfigMixin:
     # Cracking  => k_crk = k0,crk_t * exp(-beta_crk_i * is_internal)
     # ------------------------------------------------------------------
 
-    def _count_cracking(self, seg, N, counts):
+    def _count_cracking(self, seg, N, counts, start):
         """
         Count C-C scission opportunities in this fragment.
 
@@ -226,10 +228,13 @@ class ConfigMixin:
             return
         if int(np.sum(seg == 1)) != 2:
             return
-        
-        #check for 11 patterns and its position
+
         for i in range(N - 1):
             if seg[i] == 1 and seg[i + 1] == 1:
+                site_i  = self.carbon_to_site[start + i]
+                site_i1 = self.carbon_to_site[start + i + 1]
+                if not (self.occupancy[site_i] == 2 or self.occupancy[site_i1] == 2):
+                    continue
                 at_terminal = (i == 0) or (i == N - 2)
                 key = 'terminal' if at_terminal else 'internal'
                 counts['cracking'][N][key] += 1
