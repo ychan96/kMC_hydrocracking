@@ -94,11 +94,16 @@ class BaseKineticMC:
         if reaction_type == 'adsorption':
             if N <= 4:
                 scale = np.exp(-p['alpha_gas_ads'] * N / kT)
+                k0 = p['k_a1']
             elif N <= 12:
                 scale = np.exp(-p['alpha_light_ads'] * N / kT)
                 k0 = p['k_a2']
+            elif N <= 40:
+                scale = (N ** p['beta_ads']) * np.exp(p['alpha_heavy_ads'] * N)
+                k0 = p['k_a3']
             else:
-                scale = (N ** p['beta_ads']) * np.exp(-p['alpha_heavy_ads'] * N / kT)
+                # clamp to plateau value at N=40
+                scale = (40 ** p['beta_ads']) * np.exp(p['alpha_heavy_ads'] * 40)
                 k0 = p['k_a3']
             return k0 * scale
 
@@ -109,8 +114,12 @@ class BaseKineticMC:
             elif N <= 12:
                 scale = np.exp(-p['alpha_light_des'] * N / kT)
                 k0 = p['k_d2']
+            elif N <= 40:
+                scale = (N ** p['beta_des']) * np.exp(p['alpha_heavy_des'] * N)
+                k0 = p['k_d3']
             else:
-                scale = (N ** p['beta_des']) * np.exp(-p['alpha_heavy_des'] * N / kT)
+                # clamp to plateau value at N=40
+                scale = (40 ** p['beta_des']) * np.exp(p['alpha_heavy_des'] * 40)
                 k0 = p['k_d3']
             return k0 * scale
 

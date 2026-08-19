@@ -36,7 +36,7 @@ from skopt import gp_minimize
 from skopt.space import Real
 from skopt.plots import plot_convergence
 
-from kmc_v3.simulation import run_multiple_simulations
+from backend.kmc_v3.simulation import run_multiple_simulations
 
 # ══════════════════════════════════════════════════════════════════
 #  Experimental data
@@ -178,21 +178,21 @@ def optimize_parameters(
     # ── Search space ──────────────────────────────────────────────
     # Physical bounds informed by typical heterogeneous catalysis values.
     space = [
-        Real(1e-3, 1e-1,  name='k_ads_i'),
-        Real(1e-4, 1e-2,  name='k_ads_t'),
-        Real(1e-3, 1e-1,  name='k_d_i'),
-        Real(1e-3, 1e-1,  name='k_d_t'),
+        Real(1e-2,  5e-1,  name='k_ads_i'),      # nominal 0.094
+        Real(1e-5,  5e-4,  name='k_ads_t'),      # nominal 0.000108
+        Real(1e-2,  5e-1,  name='k_d_i'),        # nominal 0.099
+        Real(5e-3,  3e-1,  name='k_d_t'),        # nominal 0.062
 
-        Real(0.001, 0.02, name='alpha_vdw_gas'),
-        Real(0.001, 0.02, name='alpha_vdw_light'),
-        Real(0.001, 0.02, name='alpha_vdw_heavy'),
+        Real(0.001, 0.05,  name='alpha_vdw_gas'),    # nominal 0.0126
+        Real(1e-4,  0.005, name='alpha_vdw_light'),  # nominal 0.00113
+        Real(1e-4,  0.005, name='alpha_vdw_heavy'),  # nominal 0.00144
 
-        Real(1e-4, 1e-2,  name='k_dMC_i'),
-        Real(1e-4, 1e-2,  name='k_dMC_t'),
-        Real(1e-4, 1e-2,  name='k_crk_i'),
-        Real(1e-4, 1e-2,  name='k_crk_t'),
+        Real(5e-4,  0.03,  name='k_dMC_i'),      # nominal 0.0063
+        Real(2e-3,  0.1,   name='k_dMC_t'),      # nominal 0.020
+        Real(5e-5,  2e-3,  name='k_crk_i'),      # nominal 0.000462
+        Real(1e-3,  0.05,  name='k_crk_t'),      # nominal 0.0097
 
-        Real(0.1,  2.0,   name='K_H2'),
+        Real(0.1,   2.0,   name='K_H2'),         # nominal 0.542
     ]
 
     def objective(x):
@@ -265,7 +265,7 @@ if __name__ == '__main__':
                         help='Path to experimental Excel file')
     parser.add_argument('--temp',       type=float, default=250)
     parser.add_argument('--time',       type=float, default=7200)
-    parser.add_argument('--length',     type=int,   default=300)
+    parser.add_argument('--length',     type=int,   default=None)
     parser.add_argument('--P-H2',       type=float, default=50)
     parser.add_argument('--sims',       type=int,   default=5,
                         help='Simulations per objective evaluation')

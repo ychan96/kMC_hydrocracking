@@ -8,7 +8,7 @@ class ConfigMixin:
 
     Counting output (from update_configuration) is keyed by current fragment
     length N so that reactions.py can compute one Arrhenius rate per (type, N)
-    and multiply by the site count — no hardcoded C1/C2/.../C5+ buckets.
+    and multiply by the site count.
 
     Rate equations:
         k_ads_g(N) = k0_ads_gas * exp(-alpha_vdw * N / kT)     # gas adsorption rate
@@ -208,7 +208,7 @@ class ConfigMixin:
     # Cracking  => k_crk = k0,crk_t * exp(-beta_crk_i * is_internal)
     # ------------------------------------------------------------------
 
-    def _count_cracking(self, seg, N, counts, start):
+    def _count_cracking(self, seg, N, counts):
         """
         Count C-C scission opportunities in this fragment.
 
@@ -231,10 +231,6 @@ class ConfigMixin:
 
         for i in range(N - 1):
             if seg[i] == 1 and seg[i + 1] == 1:
-                site_i  = self.carbon_to_site[start + i]
-                site_i1 = self.carbon_to_site[start + i + 1]
-                if not (self.occupancy[site_i] == 2 or self.occupancy[site_i1] == 2):
-                    continue
                 at_terminal = (i == 0) or (i == N - 2)
                 key = 'terminal' if at_terminal else 'internal'
                 counts['cracking'][N][key] += 1

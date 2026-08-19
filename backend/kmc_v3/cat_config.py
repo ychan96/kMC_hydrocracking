@@ -96,12 +96,11 @@ class CatalystConfig:
                     "lattice_constant": self.geometry.lattice_constant,
                     "dimensions":       list(self.geometry.dimensions),
                     "periodic":         list(self.geometry.periodic),
-                },
+                }, 
                 "c_site_type":     self.c_site_type.value,
                 "h_site_type":     self.h_site_type.value,
                 "neighbor_cutoff": self.neighbor_cutoff,
             }, f, indent=2)
-
 
 class CatalystSurface:
     """
