@@ -1,15 +1,17 @@
 import numpy as np
 from scipy import constants
 from .constants import MAX_LENGTH, C_LUMP, cn
+from .lattice import Lattice
 
 
 class BaseKineticMC:
     def __init__(self, temp_C=250, reaction_time=7200, init_len=None,
-                 k_const=None, P_H2=50, catalyst_config=None):
+                 k_const=None, P_H2=25, theta_H=0.0, catalyst_config=None, seed=None):
         self.temp_K          = temp_C + 273.15
         self.kb              = constants.Boltzmann
         self.reaction_time   = reaction_time
         self.P_H2            = P_H2
+        self.theta_H         = float(theta_H)
         self.KB_EV = 8.617333e-5
 
         # Regime split points
@@ -29,23 +31,14 @@ class BaseKineticMC:
             'dmc_i': 2.061422e-02,    'dmc_t': 2.18325e-03,
             'crk_i': 9.641641e-04,    'crk_t': 1.946220e-03,
         }
-
-        SHAPE_KEYS = list(BASE_SHAPE.keys())
-        FAMILIES = {'ads': ['ads_k0_g', 'ads_k0_l', 'ads_k0_h'],
-                    'des': ['des_k0_g', 'des_k0_l', 'des_k0_h'],
-                    'dmc': ['dmc_i', 'dmc_t'],
-                    'crk': ['crk_i', 'crk_t']}
         self.REGIMES = {'g': (1, self.x_g),
                         'l': (self.x_g + 1, self.x_l),
                         'h': (self.x_l + 1, MAX_LENGTH)}
 
         self.k_const = k_const if k_const is not None else self.build_k_const(BASE_SHAPE)
 
-        # Constant for the whole run — depends only on P_H2
-        self.eff_H = self.eff_H_availability(self.P_H2)
-
-        # Build surface and initialise occupancy arrays
-        self.init_active_sites(catalyst_config)
+        # Build surface and initialize occupancy arrays
+        self.init_active_sites(catalyst_config, seed=seed)
 
         if init_len is None:
             init_len = self.normal_dist(mu=280, sigma=10)
@@ -96,7 +89,7 @@ class BaseKineticMC:
     # ------------------------------------------------------------------
 
     def normal_dist(self, mu=280, sigma=10, n_samples=None):
-        """Draw chain length(s) from a normal distribution."""
+        """Draw chain length(N) from a normal distribution."""
         if n_samples is None:
             x = float(np.random.normal(loc=mu, scale=sigma))
             return int(np.floor(x))
@@ -106,13 +99,7 @@ class BaseKineticMC:
     # ------------------------------------------------------------------
     # Rate calculator
     # ------------------------------------------------------------------
-    
-    def eff_H_availability(self, P_H2):
-        """Effective surface H availability at a given H2 pressure."""
-        #Heuristic fit to H2 pressure dependence
-        p_c = 13.75
-        n = 1.164
-        return 1-np.exp(-(P_H2/p_c)**n)
+
 
     def get_adsorption_rate(self, chain_len, is_terminal=None):
         return self.k_const[f'ads_{cn(chain_len)}']
@@ -121,84 +108,62 @@ class BaseKineticMC:
         return self.k_const[f'des_{cn(chain_len)}']
 
     def get_dmc_rate(self, chain_len, is_terminal):
-        """Returns None for C1 (no dMC reaction)."""
-        if chain_len == 1:
-            return None
-        if is_terminal:
-            rate = self.k_const['dmc_t'] * self.eff_H 
-        else:
-            rate = self.k_const['dmc_i'] * self.eff_H
-        return rate
+        if chain_len == 1: 
+            return None #return None for C1 (no C-C bonds)
+        return self.k_const['dmc_t' if is_terminal else 'dmc_i']
 
     def get_cracking_rate(self, chain_len, is_terminal):
-        """Returns None for C1 (no C-C bonds)."""
         if chain_len == 1:
-            return None
-        if is_terminal:
-            rate = self.k_const['crk_t'] * self.eff_H
-        else:
-            rate = self.k_const['crk_i'] * self.eff_H
-        return rate
+            return None #return None for C1 (no C-C bonds)
+        return self.k_const['crk_t' if is_terminal else 'crk_i']
 
+    # ------------------------------------------------------------------
+    # Surface initialization
+    # ------------------------------------------------------------------
+ 
+    def init_active_sites(self, catalyst_config=None, seed=None):
+        cfg = {'facet': '111', 'nx': 5, 'ny': 5, 'a': 2.77} #None -> default 5x5 (111) patch
+        # if catalyst_config is not None, overwrite defaults with user-specified values. Acceptable formats:
+        # 1) 8 -> int 8x8 patch, 
+        # 2) {'nx': 8, 'ny': 3} -> dict 8x3 patch, 
+        # 3) {'facet': '100'} -> dict 5x5 (100) patch
+        if isinstance(catalyst_config, int):
+            cfg.update(nx=catalyst_config, ny=catalyst_config)
+        elif isinstance(catalyst_config, dict):
+            cfg.update(catalyst_config)
+ 
+        self.catalyst_config = cfg
+        self.surface = Lattice(theta_H=self.theta_H, seed=seed, **cfg)
+ 
+        # views of the lattice arrays, not copies
+        self.occupancy      = self.surface.occupancy
+        self.carbon_at_site = self.surface.carbon_at_site
+        self.chain_at_site  = self.surface.chain_at_site
+        self.h_occupancy    = self.surface.hollow_H          # read-only
+        self.n_sites        = self.surface.n_sites
+        self.theta_C          = self.surface.update_theta()
+ 
     # ------------------------------------------------------------------
     # Array initialization
     # ------------------------------------------------------------------
-
+ 
     def init_arrays(self, init_len):
         """
-        Initialise per-carbon tracking arrays.
-
-        carbon_array[j]   : 0=free, 1=adsorbed
+        carbon_array[j]   : 0=unbound, 1=bound
         chain_array[i]    : 0=break/boundary, 1=bonded  (length N+1)
-        hydrogen_array[j] : H count on carbon j
-                            3 = free terminal carbon
-                            2 = free internal carbon
-                            0 = adsorbed (H released to surface)
-
-        carbon_to_site[j] : surface ATOP site index holding carbon j(global_c) (-1 if free)
+        carbon_to_site[j] : bridge id holding carbon j, -1 if in the gas phase
         """
         self.carbon_array   = np.zeros(init_len, int)
-
+ 
         self.chain_array    = np.zeros(init_len + 1, int)
         self.chain_array[1:-1] = 1
-
-        self.hydrogen_array        = np.full(init_len, 2, int)
-        self.hydrogen_array[0]     = 3
-        self.hydrogen_array[-1]    = 3
-
+ 
         self.carbon_to_site = np.full(init_len, -1, int)
-
-
-    def init_active_sites(self, catalyst_config=None):
-        """
-        Build the CatalystSurface and initialise all surface-state arrays.
-
-        C-site arrays  (length = n_c_sites):
-            occupancy[i]      : 0=vacant, 1=single M-C, 2=dMC
-            chain_at_site[i]  : fragment length of carbon at site i (0 if vacant) // negative if dMC (e.g., {-3,-3} for a dMC from a C3 fragment)
-            carbon_at_site[i] : carbon_array index of carbon at site i (-1 if vacant)
-
-        H-site array  (length = n_h_sites):
-            h_occupancy[i]    : 0=vacant, 1=occupied
-            Initialised by randomly populating hollow sites according to
-            theta_H_init = sqrt(K_H2 * P_H2) / (1 + sqrt(K_H2 * P_H2)).
-            After init, every adsorption/desorption event updates h_occupancy
-            explicitly via hydrogen_array changes.
-        """
-        from .lattice import CatalystSurface, pt111_config
-
-        if catalyst_config is None:
-            catalyst_config = pt111_config()
-
-        self.surface        = CatalystSurface(catalyst_config)
-        n_c                 = self.surface.n_c_sites
-        n_h                 = self.surface.n_h_sites #length of n_h_sites = number of hollow sites
-
-        # C-site state
-        self.occupancy      = np.zeros(n_c, int)
-        self.chain_at_site  = np.zeros(n_c, int)
-        self.carbon_at_site = np.full(n_c, -1, int)
-
-        # H-site state — seeded from Langmuir equilibrium at t=0
-        theta_H_init        = self._compute_theta_H()
-        self.h_occupancy    = (np.random.rand(n_h) < theta_H_init).astype(int) 
+ 
+    # ------------------------------------------------------------------
+    # carbon coverage
+    # ------------------------------------------------------------------
+ 
+    def update_theta(self):
+        self.theta = self.surface.update_theta()
+        return self.theta

@@ -4,24 +4,6 @@ from .constants import MAX_LENGTH, C_LUMP, cn
 
 
 class ConfigMixin:
-    """
-    Mixin for chain identification and reaction-site counting.
-
-    Counting output (from update_configuration) is keyed by current fragment
-    length N so that reactions.py can compute one Arrhenius rate per (type, N)
-    and multiply by the site count.
-
-    Relies on BaseKineticMC arrays:
-        carbon_array[j]   : 0=free, 1=adsorbed
-        chain_array[i]    : 0=break/boundary, 1=bonded  (length N_total + 1)
-        occupancy[i]      : 0=vacant, 1=single M-C, 2=dMC
-        carbon_to_site[j] : surface site index for carbon j (-1 if free)
-        self.surface      : CatalystSurface (provides get_c_neighbors)
-    """     
-    # ------------------------------------------------------------------
-    # Chain identification
-    # ------------------------------------------------------------------
-
     def _identify_chains(self):
         """
         Scan chain_array for breaks (value 0) to produce contiguous fragments.
