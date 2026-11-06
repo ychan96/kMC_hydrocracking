@@ -10,17 +10,15 @@ All section, table and equation numbers below refer to the Supporting Informatio
 
 ## 1. Models at a glance
 
-|                            | **M1** Base                    | **M2** Chain-length-resolved | **M3** Regime-compressed           |
-| -------------------------- | ------------------------------ | ---------------------------- | ---------------------------------- |
-| Kinetic parameters         | 4                              | 66                           | 18 (+ θ_H)                         |
-| Ads/des constants          | 1 each                         | 31 each (C1–C30, C31+)       | `k(L) = k_i·exp(α·L)` in 3 regimes |
-| dMC / scission             | 1 each                         | internal + terminal          | internal + terminal                |
-| Surface                    | M×M grid, `m_bond` / `m_chain` | M×M grid                     | Bridge/hollow lattice (`Lattice`)  |
-| Optimizer (SI Table S2)    | Bayesian optimization          | CMA-ES                       | CMA-ES                             |
-| RMSE, C1–C30 (SI Table S4) | 1.66                           | 0.41                         | 0.38                               |
-| Φ = Y_C1 / (Y_C2 + Y_C3)   | 0.75                           | 2.17                         | 2.61 (exp. 2.88)                   |
-| Package                    | `pykmc_M1`                     | `backend/pykMC_M2`           | `pykmc_M3`                         |
-| Run file                   | `simulation_v0.py`             | `main_m2.py`                 | `main_m3.py`                       |
+|                    | **M1** Base                    | **M2** Chain-length-resolved | **M3** Regime-compressed           |
+| ------------------ | ------------------------------ | ---------------------------- | ---------------------------------- |
+| Kinetic parameters | 4                              | 66                           | 18 (+ θ_H)                         |
+| Ads/des constants  | 1 each                         | 31 each (C1–C30, C31+)       | `k(L) = k_i·exp(α·L)` in 3 regimes |
+| dMC / scission     | 1 each                         | internal + terminal          | internal + terminal                |
+| Surface            | M×M grid, `m_bond` / `m_chain` | M×M grid                     | Bridge/hollow lattice (`Lattice`)  |
+| Optimizer          | Bayesian optimization          | CMA-ES                       | CMA-ES                             |
+| Package            | `backend/pykmc_M1`             | `backend/pykMC_M2`           | `backend/pykmc_M3`                 |
+| Run file           | `simulation_v0.py`             | `main_m2.py`                 | `main_m3.py`                       |
 
 Reference condition for all three: **543 K (270 °C), 25 bar H₂, 10 h**, on a 5 × 5 patch (SI Section S2).
 
