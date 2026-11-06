@@ -30,13 +30,12 @@ Reference condition for all three: **543 K (270 °C), 25 bar H₂, 10 h**, on a 
 
 ```
 kMC_hydrocracking/
+├── main_m1.py                 # M1 command-line run file
 ├── main_m2.py                 # M2 command-line run file
-├── main_m3.py                 # M3 command-line run file
-├── simulation.py              # M3 driver  (run_simulation, run_multiple_simulations, calculate_conversion)
-├── simulation_v0.py           # M1 driver
-├── pykmc_M1/                  # M1: init_v0, count_sites_v0, reactions_v0, coverage_v0, utils
-├── pykmc_M3/                  # M3: base, constants, lattice, count_sites, reactions, utils
-└── backend/pykMC_M2/          # M2: init_v4, count_sites_v4, reactions_v4, coverage, simulation_v4, utils_v4
+├── main_m2.py                 # M3 command-line run file
+├── backend/pykmc_M1/                  # M1: init_v0, count_sites_v0, reactions_v0, coverage_v0, utils
+├────────── pykmc_M2/                  # M2: init_v4, count_sites_v4, reactions_v4, coverage,simulation_v4,utils_v4
+├────────── pykmc_M3/                  # M3: base, constants, lattice, count_sites, reactions, utils
 ```
 
 M1 and M3 import their packages as top-level modules (`from pykmc_M3 import KMC`), so run them from the repository root. M2 imports `backend.pykMC_M2.*`. If your layout differs, edit the import lines at the top of the run files.
