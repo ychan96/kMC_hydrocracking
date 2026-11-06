@@ -58,13 +58,13 @@ pip install numpy scipy pandas matplotlib openpyxl imageio
 ### M3 (regime-compressed, lattice)
 
 ```bash
-python main_m3.py --temp 270 --time 7200 --sims 100 --seed 0 --output-dir results_m3
+python main_m3.py --temp 270 --time 36000 --sims 100 --seed 0 --output-dir results_m3
 ```
 
 | Flag                      | Default        | Meaning                                                                       |
 | ------------------------- | -------------- | ----------------------------------------------------------------------------- |
 | `--temp`                  | 250            | Temperature (°C); a label only, because rates are fixed at the reference      |
-| `--time`                  | 7200           | Simulated reaction time (s); see §7 for the time basis                        |
+| `--time`                  | 7200           | Simulated reaction time (s); use 36000 (10 h)                                 |
 | `--length`                | None           | Initial chain length; `None` draws from N(280, 10)                            |
 | `--sims`                  | 10             | Number of independent trajectories                                            |
 | `--msize`                 | 5              | Surface patch size (msize × msize metal atoms)                                |
@@ -83,7 +83,7 @@ From Python:
 from simulation import run_multiple_simulations, calculate_conversion
 from pykmc_M3.utils import plot_distribution
 
-res = run_multiple_simulations(100, temp_C=270, reaction_time=7200, seed=0)
+res = run_multiple_simulations(100, temp_C=270, reaction_time=36000, seed=0)
 calculate_conversion(res)
 plot_distribution(res, exp_data_file='data.xlsx', exp_col=2)
 ```
@@ -91,7 +91,7 @@ plot_distribution(res, exp_data_file='data.xlsx', exp_col=2)
 ### M2 (chain-length-resolved)
 
 ```bash
-python main_m2.py --temp 270 --time 7200 --sims 100 --msize 5 --output-dir results_m2
+python main_m2.py --temp 270 --time 36000 --sims 100 --msize 5 --output-dir results_m2
 ```
 
 Flags: `--temp --time --length --sims --msize --exp-data --verbose --output-dir --coverage` (same meaning as for M3).
@@ -102,7 +102,9 @@ Flags: `--temp --time --length --sims --msize --exp-data --verbose --output-dir 
 from simulation_v0 import run_multiple_simulations
 from pykmc_M1.utils import plot_distribution
 
-res = run_multiple_simulations(100, temp_C=270, reaction_time=7200, m_size=5, P_H2=25, seed=0)
+SI_M1 = {'ads': 7.04e-5, 'des': 1.69e-3, 'dmc': 1.97e-4, 'crk': 1.80e-3}   # SI Table S3
+res = run_multiple_simulations(100, temp_C=270, reaction_time=36000, m_size=5, P_H2=25,
+                               rate_constants=SI_M1, seed=0)
 plot_distribution(res, exp_data_file='data.xlsx', exp_col=11)
 ```
 
@@ -196,7 +198,7 @@ The 31 + 31 adsorption and desorption constants are listed in SI Table S3. The r
 | ----------- | ---------- | ----------- | ----------- | ------- |
 | 1.98 × 10⁻² | 6.0 × 10⁻³ | 9.13 × 10⁻⁴ | 3.51 × 10⁻³ | 0.5829  |
 
-To run M3 with the SI parameters, using the 36,000 s basis:
+To run M3 with the SI parameters:
 
 ```python
 from pykmc_M3 import BaseKineticMC
@@ -214,19 +216,7 @@ res = run_multiple_simulations(10000, temp_C=270, reaction_time=36000,
 
 ---
 
-## 7. Time basis: 7,200 s vs 36,000 s
-
-Every propensity is linear in _k_, so scaling all _k_ by _c_ and the reaction time by 1/_c_ gives the same sequence of events. The SI reports constants for **36,000 s (10 h)**. The code defaults use a **7,200 s** run, which needs constants **5×** larger:
-
-```
-k_code (7,200 s) = 5 × k_SI (36,000 s)
-```
-
-For example, the M1 defaults in `init_v0.py` (3.52e-4, 8.46e-3, 9.84e-4, 8.98e-3) are exactly 5 × the SI Table S3 values.
-
----
-
-## 8. Temperature and H₂-pressure dependence (SI Sections S3.2–S3.5)
+## 7. Temperature and H₂-pressure dependence (SI Sections S3.2–S3.5)
 
 Reference T_ref = 543 K. Rate constants at the reference are held fixed.
 
@@ -259,7 +249,7 @@ Pressure dependence (SI Section S2.1, stage 5): at 523 K, θ_H is computed at ea
 
 ---
 
-## 9. Outputs
+## 8. Outputs
 
 `run_simulation` returns a dictionary per trajectory:
 
@@ -279,21 +269,21 @@ Pressure dependence (SI Section S2.1, stage 5): at 523 K, θ_H is computed at ea
 
 ---
 
-## 10. Code defaults vs SI: check before reproducing SI results
+## 9. Code defaults vs SI: check before reproducing SI results
 
-| Item                        | Code default                                     | SI value                                       | Action                                                           |
-| --------------------------- | ------------------------------------------------ | ---------------------------------------------- | ---------------------------------------------------------------- |
-| M1 rate constants           | 5 × SI (7,200 s basis)                           | Table S3 (36,000 s basis)                      | Consistent; see §7                                               |
-| M1 θ_H factor               | θ_H computed but not applied to rates            | f_e enters all propensities (Table S3, note a) | Confirm the M1 rate expression                                   |
-| M3 `BASE_SHAPE` (`base.py`) | e.g. `ads_k0_g` = 1.69e-4, `ads_alpha_g` = 0.498 | 8.33e-5, 0.396                                 | Different fit, not a time rescale (α differs); pass `SI_M3` (§6) |
-| M3 θ_H                      | 0.61                                             | 0.5829                                         | Pass `theta_H=0.5829`                                            |
-| M3 `K_H2` (`base.py`)       | 0.0158                                           | 0.0781 bar⁻¹                                   | Used only when `theta_H=None`                                    |
-| Reaction time               | 7,200 s                                          | 36,000 s                                       | Match it to the _k_ basis (§7)                                   |
-| Trajectories per condition  | 10 (CLI default)                                 | 10,000                                         | Set `--sims 10000`                                               |
-| `--temp`                    | 250 °C                                           | 543 K = 270 °C                                 | A label only in M1–M3                                            |
+| Item                             | Code default                                     | SI value                                       | Action                                                           |
+| -------------------------------- | ------------------------------------------------ | ---------------------------------------------- | ---------------------------------------------------------------- |
+| M1 rate constants (`init_v0.py`) | 3.52e-4, 8.46e-3, 9.84e-4, 8.98e-3               | Table S3                                       | Pass `SI_M1` (§4)                                                |
+| M1 θ_H factor                    | θ_H computed but not applied to rates            | f_e enters all propensities (Table S3, note a) | Confirm the M1 rate expression                                   |
+| M3 `BASE_SHAPE` (`base.py`)      | e.g. `ads_k0_g` = 1.69e-4, `ads_alpha_g` = 0.498 | 8.33e-5, 0.396                                 | Different fit, not a time rescale (α differs); pass `SI_M3` (§6) |
+| M3 θ_H                           | 0.61                                             | 0.5829                                         | Pass `theta_H=0.5829`                                            |
+| M3 `K_H2` (`base.py`)            | 0.0158                                           | 0.0781 bar⁻¹                                   | Used only when `theta_H=None`                                    |
+| Reaction time                    | 7,200 s                                          | 36,000 s (10 h)                                | Set `--time 36000`                                               |
+| Trajectories per condition       | 10 (CLI default)                                 | 10,000                                         | Set `--sims 10000`                                               |
+| `--temp`                         | 250 °C                                           | 543 K = 270 °C                                 | A label only in M1–M3                                            |
 
 ---
 
-## 11. Citation
+## 10. Citation
 
-If you use this code, please cite the main article and its Supporting Information (Park, Yoo, Kim).
+If you use this code, please cite the main article and its Supporting Information (Y.C. Park, C-J. Yoo*, KS. Kim*).
