@@ -4,7 +4,7 @@ Kinetic Monte Carlo (kMC) framework for hydrogenolysis of long-chain alkanes (HD
 
 All section, table and equation numbers below refer to the Supporting Information (SI) of:
 
-> Y. C. Park, C.-J. Yoo, K. Kim, _A Computationally Efficient Kinetic Monte Carlo Framework for Long-Chain Alkane Hydrogenolysis_, Supporting Information.
+> Y. C. Park, C.-J. Yoo, K. Kim, \_A kinetic Monte Carlo model that couples explicit chain scission with catalyst surface kinetics for polyethylene hydrogenolysis
 
 ---
 
@@ -18,7 +18,7 @@ All section, table and equation numbers below refer to the Supporting Informatio
 | Surface            | M×M grid, `m_bond` / `m_chain` | M×M grid                     | Bridge/hollow lattice (`Lattice`)  |
 | Optimizer          | Bayesian optimization          | CMA-ES                       | CMA-ES                             |
 | Package            | `backend/pykmc_M1`             | `backend/pykMC_M2`           | `backend/pykmc_M3`                 |
-| Run file           | `simulation_v0.py`             | `main_m2.py`                 | `main_m3.py`                       |
+| Run file           | `main_m1.py`                   | `main_m2.py`                 | `main_m3.py`                       |
 
 Reference condition for all three: **543 K (270 °C), 25 bar H₂, 10 h**, on a 5 × 5 patch (SI Section S2).
 
