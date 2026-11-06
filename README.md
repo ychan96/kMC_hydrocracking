@@ -1,4 +1,4 @@
-# pykMC PE hydrogenolysis
+# pykMC for PE hydrogenolysis
 
 Kinetic Monte Carlo (kMC) framework for hydrogenolysis of long-chain alkanes (HDPE model chains) on a metal surface. Three model formulations, M1–M3, are included; they differ in how rate constants are resolved by chain length.
 
