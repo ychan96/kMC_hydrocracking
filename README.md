@@ -1,10 +1,10 @@
-# kMC_hydrocracking
+# pykMC PE hydrogenolysis
 
 Kinetic Monte Carlo (kMC) framework for hydrogenolysis of long-chain alkanes (HDPE model chains) on a metal surface. Three model formulations, M1–M3, are included; they differ in how rate constants are resolved by chain length.
 
 All section, table and equation numbers below refer to the Supporting Information (SI) of:
 
-> Y. C. Park, C.-J. Yoo, KS. Kim, \A kinetic Monte Carlo model that couples explicit chain scission with catalyst surface kinetics for polyethylene hydrogenolysis
+> Y. C. Park, C.-J. Yoo*, KS. Kim*, A kinetic Monte Carlo model that couples explicit chain scission with catalyst surface kinetics for polyethylene hydrogenolysis
 
 ---
 
